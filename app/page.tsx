@@ -1,95 +1,111 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Link from "next/link";
+import PaymentStatus from "@/components/PaymentStatus";
+import { searchPayments } from "@/lib/db";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: { q?: string; status?: string };
+}) {
+  const resolvedSearchParams = await searchParams;
+
+  const payments = await searchPayments(
+    resolvedSearchParams?.q,
+    resolvedSearchParams?.status,
+  );
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div>
+      <div className="card">
+        <h1>X-Pay Mini Payment Console</h1>
+        <p>Manage your payment transactions</p>
+      </div>
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <div className="card">
+        <h2>Search & Filter</h2>
+        <form method="GET" className="filters">
+          <div className="filter-group">
+            <label htmlFor="q" className="form-label">
+              Search by Your Order ID
+            </label>
+            <input
+              type="text"
+              id="q"
+              name="q"
+              className="form-input"
+              defaultValue={resolvedSearchParams?.q || ""}
+              placeholder="Enter order ID..."
             />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          </div>
+          <div className="filter-group">
+            <label htmlFor="status" className="form-label">
+              Filter by Status
+            </label>
+            <select
+              id="status"
+              name="status"
+              className="form-select"
+              defaultValue={resolvedSearchParams?.status || ""}
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="canceled">Canceled</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ marginTop: "2rem", width: "130px" }}
+            >
+              Search
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>System ID</th>
+            <th>Your Order ID</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payments.map((payment) => (
+            <tr key={payment.id}>
+              <td>{payment.id}</td>
+              <td>{payment.merchantOrderId}</td>
+              <td>
+                {(payment.amount / 100).toFixed(2)} {payment.currency}
+              </td>
+              <td>
+                <PaymentStatus status={payment.status} />
+              </td>
+              <td>{new Date(payment.createdAt).toLocaleDateString()}</td>
+              <td>
+                <Link
+                  style={{ color: "white" }}
+                  href={`/payments/${payment.id}`}
+                >
+                  View
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {payments.length === 0 && (
+        <p style={{ textAlign: "center", fontWeight: 700 }}>
+          No payments found
+        </p>
+      )}
     </div>
   );
 }
